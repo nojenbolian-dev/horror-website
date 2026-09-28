@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مملكة الرعب القوطية | Gothic Horror Realm</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Cinzel & Tajawal -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;900&family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #050505;
+            color: #d1d5db;
+            font-family: 'Tajawal', sans-serif;
+            background-image: radial-gradient(circle at center, #1a0303 0%, #050505 100%);
+            background-attachment: fixed;
+        }
+        .gothic-title {
+            font-family: 'Cinzel', serif;
+            letter-spacing: 2px;
+            text-shadow: 0 0 15px rgba(185, 28, 28, 0.6);
+        }
+        /* تصميم القوس القوطي للبوستر */
+        .gothic-arch {
+            border-top-left-radius: 50% 30%;
+            border-top-right-radius: 50% 30%;
+            border: 2px solid #3f0909;
+            transition: all 0.4s ease;
+        }
+        .gothic-card:hover .gothic-arch {
+            border-color: #dc2626;
+            box-shadow: 0 0 20px rgba(220, 38, 38, 0.4);
+            transform: translateY(-5px);
+        }
+        .gothic-border {
+            border: 1px solid #280606;
+            background: rgba(15, 15, 15, 0.85);
+            backdrop-filter: blur(8px);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <!-- Header & Search -->
+    <header class="gothic-border sticky top-0 z-40 border-b border-red-950/40 p-4">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <!-- Logo -->
+            <div class="flex items-center gap-3">
+                <span class="text-3xl text-red-600 font-bold">☠️</span>
+                <h1 class="gothic-title text-2xl md:text-3xl text-red-600 tracking-wider">GOTHIC HORROR</h1>
+            </div>
+            
+            <!-- Live Search Bar -->
+            <div class="relative w-full md:w-96">
+                <input type="text" id="searchInput" oninput="handleSearch()" 
+                    placeholder="ابحث عن فيلم رعب..." 
+                    class="w-full bg-black/80 border border-red-900/50 text-gray-200 placeholder-red-900/60 px-4 py-2.5 rounded-none focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 text-sm transition">
+                <span class="absolute left-3 top-3 text-red-800 text-sm">🔍</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto px-4 py-8 flex-grow w-full">
+        <!-- Section Title -->
+        <div class="text-center mb-10">
+            <h2 class="gothic-title text-xl text-red-700 uppercase tracking-widest mb-1">ـ الأرشيف القوطي ـ</h2>
+            <p class="text-xs text-gray-500">اختر أضحيتك الليلة من مكتبة الظلام</p>
+        </div>
+
+        <!-- Movie Grid (10 Movies Per Page) -->
+        <div id="movieGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            <!-- Movie cards will load dynamically via JS -->
+        </div>
+
+        <!-- Pagination (10 Pages) -->
+        <div class="flex justify-center items-center gap-2 mt-12 flex-wrap" id="pagination">
+            <!-- Pagination buttons dynamically loaded -->
+        </div>
+    </main>
+
+    <!-- Modal Video Player (Popup) -->
+    <div id="videoModal" class="fixed inset-0 bg-black/95 z-50 hidden flex items-center justify-center p-4">
+        <div class="gothic-border relative w-full max-w-4xl p-4 border border-red-900">
+            <button onclick="closePlayer()" class="absolute -top-10 left-0 text-red-600 text-2xl font-bold hover:text-white">✕ إغلاق</button>
+            <div class="aspect-video w-full bg-black">
+                <iframe id="embedFrame" class="w-full h-full" src="" frameborder="0" allowfullscreen></iframe>
+            </div>
+            <h3 id="modalTitle" class="gothic-title text-xl text-red-600 mt-4"></h3>
+            <p id="modalDesc" class="text-xs text-gray-400 mt-2 line-clamp-3"></p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="gothic-border border-t border-red-950/30 text-center py-6 text-xs text-red-950">
+        <p>© 2026 جميع الحقوق محفوظة لـ مملكة الرعب القوطية</p>
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // عينة من 100 فيلم (بيانات تجريبية للواجهة)
+        const allMovies = Array.from({ length: 100 }, (_, i) => ({
+            id: i + 1,
+            title: `فيلم الرعب ${i + 1}`,
+            year: 2020 + (i % 6),
+            rating: (6 + (i % 4) + (i % 10) / 10).toFixed(1),
+            poster: `https://picsum.photos/300/450?random=${i + 1}`,
+            embedUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ", // رابط مشغل فيديو للتجربة
+            description: "قصة مرعبة تدور في إحدى القلاع القوطية القديمة حيث تظهر أشباح معتمة تطارد الزوار."
+        }));
+
+        let currentPage = 1;
+        const moviesPerPage = 10;
+        let filteredMovies = [...allMovies];
+
+        function renderMovies() {
+            const grid = document.getElementById('movieGrid');
+            grid.innerHTML = '';
+            
+            const start = (currentPage - 1) * moviesPerPage;
+            const end = start + moviesPerPage;
+            const pageMovies = filteredMovies.slice(start, end);
+
+            if(pageMovies.length === 0) {
+                grid.innerHTML = `<p class="col-span-full text-center text-red-800 py-12">لم يتم العثور على أي فيلم يطابق بحثك...</p>`;
+                return;
+            }
+
+            pageMovies.forEach(movie => {
+                const card = document.createElement('div');
+                card.className = 'gothic-card cursor-pointer group';
+                card.onclick = () => openPlayer(movie);
+                card.innerHTML = `
+                    <div class="gothic-arch overflow-hidden bg-black aspect-[2/3] mb-3 relative">
+                        <img src="${movie.poster}" alt="${movie.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500 opacity-80 group-hover:opacity-100">
+                        <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black via-black/60 to-transparent p-2 text-right">
+                            <span class="text-xs bg-red-950/90 text-red-400 border border-red-800 px-1.5 py-0.5 font-bold">⭐ ${movie.rating}</span>
+                        </div>
+                    </div>
+                    <h3 class="font-bold text-sm text-gray-200 group-hover:text-red-500 transition line-clamp-1">${movie.title}</h3>
+                    <p class="text-xs text-red-900/80 font-bold mt-1">${movie.year}</p>
+                `;
+                grid.appendChild(card);
+            });
+
+            renderPagination();
+        }
+
+        function renderPagination() {
+            const container = document.getElementById('pagination');
+            container.innerHTML = '';
+            const totalPages = Math.ceil(filteredMovies.length / moviesPerPage);
+
+            if (totalPages <= 1) return;
+
+            for (let i = 1; i <= totalPages; i++) {
+                const btn = document.createElement('button');
+                btn.innerText = i;
+                btn.className = `px-3 py-1.5 text-xs font-bold transition border ${
+                    i === currentPage 
+                    ? 'bg-red-900 border-red-600 text-white shadow-[0_0_10px_rgba(220,38,38,0.5)]' 
+                    : 'bg-black/60 border-red-950 text-red-800 hover:border-red-700 hover:text-red-400'
+                }`;
+                btn.onclick = () => {
+                    currentPage = i;
+                    renderMovies();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                };
+                container.appendChild(btn);
+            }
+        }
+
+        function handleSearch() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            filteredMovies = allMovies.filter(m => m.title.toLowerCase().includes(query));
+            currentPage = 1;
+            renderMovies();
+        }
+
+        function openPlayer(movie) {
+            document.getElementById('embedFrame').src = movie.embedUrl;
+            document.getElementById('modalTitle').innerText = movie.title + ` (${movie.year})`;
+            document.getElementById('modalDesc').innerText = movie.description;
+            document.getElementById('videoModal').classList.remove('hidden');
+        }
+
+        function closePlayer() {
+            document.getElementById('embedFrame').src = '';
+            document.getElementById('videoModal').classList.add('hidden');
+        }
+
+        // Initial Load
+        renderMovies();
+    </script>
+</body>
+  </html>
+  
